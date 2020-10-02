@@ -19,12 +19,14 @@ export const reactRefreshTransform: Transform = {
 
   transform: ({ code, path }) => {
     const result = require('@babel/core').transformSync(code, {
+      presets: [require("@babel/preset-react")],
       plugins: [require('react-refresh/babel')],
       ast: false,
       sourceMaps: true,
       sourceFileName: path
     })
 
+    // 项目的入口 js 文件如果有用到 jsx 语法最好使用 .jsx 后缀
     if (!/\$RefreshReg\$\(/.test(result.code)) {
       // no component detected in the file
       return code
