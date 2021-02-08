@@ -18,18 +18,58 @@ export const reactRefreshTransform: Transform = {
     return true
   },
 
-  transform: ({ code, path }) => {
+  transform: ({ code, path, isBuild }) => {
+    const hasJsx = /(<\/)|(\/>)/.test(code)
+    const isCommonJs = /exports|require\(/.test(code)
     const result = require('@babel/core').transformSync(code, {
       plugins: [
-        require('@babel/plugin-syntax-import-meta'),
-        require('react-refresh/babel')
-      ],
-      ast: true,
+        [
+          require('@babel/plugin-proposal-decorators'),
+          {
+            legacy: true
+          }
+        ],
+        [
+          require('@babel/plugin-proposal-class-properties'),
+          {
+            loose: false
+          }
+        ],
+        // require('@babel/plugin-syntax-export-default-from'),
+        require('@babel/plugin-proposal-export-default-from'),
+        require('@babel/plugin-proposal-export-namespace-from'),
+        require('@babel/plugin-proposal-optional-chaining'),
+        !isBuild && require('react-refresh/babel')
+        // isCommonJs && require('babel-plugin-transform-commonjs-es2015-modules')
+        /*!isBuild &&
+          isCommonJs && [
+            require('babel-plugin-transform-commonjs'),
+            { synchronousImport: true }
+          ]*/
+      ].filter(Boolean),
+      ast: false,
       sourceMaps: true,
       sourceFileName: path
     })
 
+    if (path.includes('js/component/index.js')) {
+      console.log('---------------')
+      console.log('isCommonJs ', isCommonJs)
+      console.log(result.code)
+      console.log('---------------')
+    }
+
+    /*if (path.includes('public_v2/src/js/container/root.js')) {
+      console.log('------------')
+      console.log({ isBuild }, !isBuild && require('react-refresh/babel'))
+      console.log(result.code)
+      console.log('------------')
+    }*/
+    // 项目的入口 js 文件如果有用到 jsx 语法最好使用 .jsx 后缀
     if (!/\$RefreshReg\$\(/.test(result.code)) {
+      if (isBuild || hasJsx) {
+        return result.code
+      }
       // no component detected in the file
       return code
     }
